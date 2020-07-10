@@ -87,7 +87,7 @@ def userdetail(id):
         if user:
             return jsonify(user_schema.dump(user))
         return jsonify({'error':'user with that id was not found'}),404
-        
+
     elif request.method == "DELETE":
         if user:
             db.session.delete(user)
@@ -117,5 +117,23 @@ def userdetail(id):
             return jsonify(user_schema.dump(user))
         else:
             return jsonify({'error':'user with that id was not found'}),404
+
+@app.route('/login',methods=["POST"])
+def login():
+    if request.method == "POST":
+        data = request.get_json()
+        email = data['email']
+        password = data['password']
+        user = User.query.filter_by(email=email).first()
+        if user and user.verify_password(password):
+            auth_token = user.encode_auth_token(user.id)
+            if auth_token:
+                return jsonify({'token':auth_token.decode()})
+            else:
+                return jsonify({'error':'something went wrong, try again'})
+        else:
+            return jsonify({'error':'invalid credentials'})
+
+
 if __name__ == '__main__':
     app.run(debug=True)

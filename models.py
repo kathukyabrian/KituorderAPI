@@ -1,7 +1,9 @@
 from config import db
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
-
+import datetime
+import jwt
+from config import app
 class Region(db.Model):
     id = db.Column(db.Integer,primary_key=True)
     name = db.Column(db.String,nullable=False,unique=True)
@@ -31,6 +33,32 @@ class User(db.Model,UserMixin):
 
     def verify_password(self,password):
         return check_password_hash(self.passwordhash,password)
+
+    def encode_auth_token(self,user_id):
+        try:
+            payload = {
+                'exp': datetime.datetime.now() + datetime.timedelta(days=0, seconds=300),
+                'iat': datetime.datetime.now(),
+                'sub': user_id
+            }
+
+            return jwt.encode(
+            payload,
+            app.config.get('SECRET_KEY'),
+            algorithm='HS256'
+            )
+        except Exception as e:
+            return e
+
+    @staticmethod
+    def decode_auth_token(auth_token):
+        try:
+            payload = jwt.decode(auth_token,app.config.get('SECRET_KEY'))
+            return payload['sub']
+        except jwt.ExpiredSignatureError:
+            return "Signature expired, please log in again"
+        except jwt.InvalidTokenError:
+            return "Invalid token"
 
     def __repr__(self):
         return "<User {}>".format(self.email)
