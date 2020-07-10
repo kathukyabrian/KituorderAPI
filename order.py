@@ -61,16 +61,61 @@ def users():
         data = request.get_json()
         email = data['email']
         phone = data['phone']
-        firstname = data['firstname']
-        lastname = data['lastname']
+        firstname = data['firstname'].capitalize()
+        lastname = data['lastname'].capitalize()
         region = data['region']
         password = data['password']
         user = User(email=email,phone=phone,firstname=firstname,lastname=lastname,region=region,
         date_joined=datetime.now())
         user.set_password(password)
-        db.session.add(user)
-        db.session.commit()
-        return jsonify(user_schema.dump(User.query.filter_by(id=user.id).first()))
- 
+        # check on validation
+        validate_email = User.query.filter_by(email=email).first()
+        validate_phone = User.query.filter_by(phone=phone).first()
+        if (validate_email or validate_phone):
+            return jsonify({'error':'email or phone already taken'})
+        else:
+            db.session.add(user)
+            db.session.commit()
+            return jsonify(user_schema.dump(User.query.filter_by(id=user.id).first()))
+
+@app.route('/users/<int:id>',methods=['GET','PUT','DELETE'])
+def userdetail(id):
+    user = User.query.filter_by(id=id).first()
+    user_schema = UserSchema()
+    response_user_schema = UserSchema(only=('id','firstname','lastname'))
+    if request.method == "GET":
+        if user:
+            return jsonify(user_schema.dump(user))
+        return jsonify({'error':'user with that id was not found'}),404
+        
+    elif request.method == "DELETE":
+        if user:
+            db.session.delete(user)
+            db.session.commit()
+            return jsonify({'success':'user was successfully deleted'})
+        else:
+            return jsonify({'error':'user with that id was not found'}),404
+
+    elif request.method == "PUT":
+        if user:
+            data = request.get_json()
+            email = data['email']
+            phone = data['phone']
+            firstname = data['firstname']
+            lastname = data['lastname']
+            region = data['region']
+            recommender = data['recommender']
+            password = data['password']
+            user.email = email
+            user.phone = phone
+            user.firstname = firstname
+            user.lastname = lastname
+            user.region = region
+            user.recommender = recommender
+            user.set_password(password)
+            db.session.commit()
+            return jsonify(user_schema.dump(user))
+        else:
+            return jsonify({'error':'user with that id was not found'}),404
 if __name__ == '__main__':
     app.run(debug=True)
