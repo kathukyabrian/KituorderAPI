@@ -3,6 +3,7 @@ from flask import jsonify, redirect, url_for, request
 from models import Bug, Region, User
 from schemas import BugSchema, RegionSchema, UserSchema
 from datetime import datetime
+from flask_cors import cross_origin
 
 @app.before_first_request
 def create_tables():
@@ -51,32 +52,13 @@ def regiondetail(id):
 
 @app.route('/users',methods=["GET","POST"])
 def users():
-    public_users_schema = UserSchema(many=True,only=('id','firstname','lastname'))
+    public_users_schema = UserSchema(many=True,only=('id','email'))
     users_schema = UserSchema(many=True)
     users = User.query.all()
     user_schema = UserSchema(only=('id','firstname','lastname'))
     if request.method == "GET":
         return jsonify(public_users_schema.dump(users))    
-    elif request.method == "POST":
-        data = request.get_json()
-        email = data['email']
-        phone = data['phone']
-        firstname = data['firstname'].capitalize()
-        lastname = data['lastname'].capitalize()
-        region = data['region']
-        password = data['password']
-        user = User(email=email,phone=phone,firstname=firstname,lastname=lastname,region=region,
-        date_joined=datetime.now())
-        user.set_password(password)
-        # check on validation
-        validate_email = User.query.filter_by(email=email).first()
-        validate_phone = User.query.filter_by(phone=phone).first()
-        if (validate_email or validate_phone):
-            return jsonify({'error':'email or phone already taken'})
-        else:
-            db.session.add(user)
-            db.session.commit()
-            return jsonify(user_schema.dump(User.query.filter_by(id=user.id).first()))
+    
 
 @app.route('/users/<int:id>',methods=['GET','PUT','DELETE'])
 def userdetail(id):
@@ -117,6 +99,28 @@ def userdetail(id):
             return jsonify(user_schema.dump(user))
         else:
             return jsonify({'error':'user with that id was not found'}),404
+
+@app.route('/register',methods=['POST'])
+@cross_origin(origin='*',headers=['Content-Type','Authorization'])
+def register():
+    registered_user_schema = UserSchema(only=('id','email'))
+    if request.method == "POST":
+        data = request.get_json()
+        email = data['email']
+        phone = data['phone']
+        password = data['password']
+        validate_email = User.query.filter_by(email=email).first()
+        validate_phone = User.query.filter_by(phone=phone).first()
+        if (validate_email or validate_phone):
+            return jsonify({'error':'email or phone already taken'})
+        else:
+            user = User(email=email,phone=phone,date_joined=datetime.now())
+            user.set_password(password)
+            db.session.add(user)
+            db.session.commit()
+            return jsonify(registered_user_schema.dump(user))
+
+
 
 @app.route('/login',methods=["POST"])
 def login():

@@ -17,7 +17,7 @@ class User(db.Model,UserMixin):
     phone = db.Column(db.String,nullable=False,unique=True)
     firstname = db.Column(db.String,nullable=True)
     lastname = db.Column(db.String,nullable=True)
-    region = db.Column(db.Integer,db.ForeignKey('region.id'))
+    region = db.Column(db.Integer,db.ForeignKey('region.id'),nullable=True)
     service_provider = db.Column(db.Boolean,default=False)
     admin = db.Column(db.Boolean,default=False)
     date_joined = db.Column(db.Date,nullable=False)
