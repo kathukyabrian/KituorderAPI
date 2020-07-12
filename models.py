@@ -22,6 +22,8 @@ class User(db.Model,UserMixin):
     admin = db.Column(db.Boolean,default=False)
     date_joined = db.Column(db.Date,nullable=False)
     recommender = db.Column(db.Boolean,default=True)
+    confirmed = db.Column(db.Boolean,default=False)
+    confirmed_at = db.Column(db.Date,nullable=True)
     passwordhash = db.Column(db.String,nullable=False)
 
     @property

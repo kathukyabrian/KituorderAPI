@@ -12,6 +12,7 @@ app.config['SECRET_KEY'] = 'brian@2020kituorder'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql:///kituorder'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
 app.config['CORS_HEADERS'] = 'Content-Type'
+app.config['SECURITY_PASSWORD_SALT'] = 'emailsalt20201240'
 
 # database instantiation
 db = SQLAlchemy(app)

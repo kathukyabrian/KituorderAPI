@@ -1,9 +1,10 @@
 from config import app, db
-from flask import jsonify, redirect, url_for, request
+from flask import jsonify, redirect, url_for, request, render_template
 from models import Bug, Region, User
 from schemas import BugSchema, RegionSchema, UserSchema
 from datetime import datetime
 from flask_cors import cross_origin
+from utils import confirm_token, generate_confirmation_token, send_mail
 
 @app.before_first_request
 def create_tables():
@@ -48,58 +49,8 @@ def regiondetail(id):
             db.session.commit()
             return jsonify(region_schema.dump(region))
         else:
-            return jsonify({'error' : 'a region with the specified id was not found'}),404
-
-@app.route('/users',methods=["GET","POST"])
-def users():
-    public_users_schema = UserSchema(many=True,only=('id','email'))
-    users_schema = UserSchema(many=True)
-    users = User.query.all()
-    user_schema = UserSchema(only=('id','firstname','lastname'))
-    if request.method == "GET":
-        return jsonify(public_users_schema.dump(users))    
+            return jsonify({'error' : 'a region with the specified id was not found'}),404  
     
-
-@app.route('/users/<int:id>',methods=['GET','PUT','DELETE'])
-def userdetail(id):
-    user = User.query.filter_by(id=id).first()
-    user_schema = UserSchema()
-    response_user_schema = UserSchema(only=('id','firstname','lastname'))
-    if request.method == "GET":
-        if user:
-            return jsonify(user_schema.dump(user))
-        return jsonify({'error':'user with that id was not found'}),404
-
-    elif request.method == "DELETE":
-        if user:
-            db.session.delete(user)
-            db.session.commit()
-            return jsonify({'success':'user was successfully deleted'})
-        else:
-            return jsonify({'error':'user with that id was not found'}),404
-
-    elif request.method == "PUT":
-        if user:
-            data = request.get_json()
-            email = data['email']
-            phone = data['phone']
-            firstname = data['firstname']
-            lastname = data['lastname']
-            region = data['region']
-            recommender = data['recommender']
-            password = data['password']
-            user.email = email
-            user.phone = phone
-            user.firstname = firstname
-            user.lastname = lastname
-            user.region = region
-            user.recommender = recommender
-            user.set_password(password)
-            db.session.commit()
-            return jsonify(user_schema.dump(user))
-        else:
-            return jsonify({'error':'user with that id was not found'}),404
-
 @app.route('/register',methods=['POST'])
 @cross_origin(origin='*',headers=['Content-Type','Authorization'])
 def register():
@@ -116,13 +67,35 @@ def register():
         else:
             user = User(email=email,phone=phone,date_joined=datetime.now())
             user.set_password(password)
+            confirm_token = generate_confirmation_token(user.email)
+            confirm_url = url_for('confirm_email',token=confirm_token,_external=True)
+            html = render_template('activate.html',confirm_url=confirm_url)
+            subject = "Email Confirmation"
             db.session.add(user)
             db.session.commit()
+            send_mail(subject,user.email,html)
             return jsonify(registered_user_schema.dump(user))
 
+@app.route('/register/<token>')
+@cross_origin(origin='*',headers=['Content-Type','Authorization'])
+def confirm_email(token):
+    try:
+        email = confirm_token(token)
+    except:
+        return jsonify({'error':'The confirmation link is invalid or expired'})
+    
+    user = User.query.filter_by(email=email).first_or_404()
+    if user.confirmed:
+        return jsonify({'user':'user is already confirmed, proceed to login'})
+    else:
+        user.confirmed = True
+        user.confirmed_at = datetime.now()
+        db.session.commit()
+        return jsonify({'success':'user account was confirmed, proceed to login!'})
 
 
 @app.route('/login',methods=["POST"])
+@cross_origin(origin='*',headers=['Content-Type','Authorization'])
 def login():
     if request.method == "POST":
         data = request.get_json()
