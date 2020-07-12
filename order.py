@@ -81,18 +81,17 @@ def register():
 def confirm_email(token):
     try:
         email = confirm_token(token)
+        user = User.query.filter_by(email=email).first_or_404()
+        if user.confirmed:
+            return jsonify({'user':'user is already confirmed, proceed to login'})
+        else:
+            user.confirmed = True
+            user.confirmed_at = datetime.now()
+            db.session.commit()
+            return jsonify({'success':'user account was confirmed, proceed to login!'})
     except:
         return jsonify({'error':'The confirmation link is invalid or expired'})
     
-    user = User.query.filter_by(email=email).first_or_404()
-    if user.confirmed:
-        return jsonify({'user':'user is already confirmed, proceed to login'})
-    else:
-        user.confirmed = True
-        user.confirmed_at = datetime.now()
-        db.session.commit()
-        return jsonify({'success':'user account was confirmed, proceed to login!'})
-
 
 @app.route('/login',methods=["POST"])
 @cross_origin(origin='*',headers=['Content-Type','Authorization'])
