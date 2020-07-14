@@ -1,10 +1,11 @@
 from config import app, db
 from flask import jsonify, redirect, url_for, request, render_template
 from models import Bug, Region, User
-from schemas import BugSchema, RegionSchema, UserSchema
+from schemas import RegionSchema, UserSchema
 from datetime import datetime
 from flask_cors import cross_origin
 from utils import confirm_token, generate_confirmation_token, send_mail
+from marshmallow import ValidationError
 
 @app.before_first_request
 def create_tables():
@@ -54,17 +55,14 @@ def regiondetail(id):
 @app.route('/register',methods=['POST'])
 @cross_origin(origin='*',headers=['Content-Type','Authorization'])
 def register():
-    registered_user_schema = UserSchema(only=('id','email'))
+    registered_user_schema = UserSchema(only=('id','email','phone'))
     if request.method == "POST":
         data = request.get_json()
         email = data['email']
         phone = data['phone']
         password = data['password']
-        validate_email = User.query.filter_by(email=email).first()
-        validate_phone = User.query.filter_by(phone=phone).first()
-        if (validate_email or validate_phone):
-            return jsonify({'error':'email or phone already taken'})
-        else:
+        try:
+            registered_user_schema.load(data)
             user = User(email=email,phone=phone,date_joined=datetime.now())
             user.set_password(password)
             confirm_token = generate_confirmation_token(user.email)
@@ -75,6 +73,8 @@ def register():
             db.session.commit()
             send_mail(subject,user.email,html)
             return jsonify(registered_user_schema.dump(user))
+        except ValidationError as error:
+            return jsonify({'errors':error.messages})
 
 @app.route('/register/<token>')
 @cross_origin(origin='*',headers=['Content-Type','Authorization'])
@@ -109,6 +109,7 @@ def login():
                 return jsonify({'error':'something went wrong, try again'})
         else:
             return jsonify({'error':'invalid credentials'})
+
 
 
 if __name__ == '__main__':
