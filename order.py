@@ -1,7 +1,7 @@
 from config import app, db
 from flask import jsonify, redirect, url_for, request, render_template
 from models import Bug, Region, User
-from schemas import RegionSchema, UserSchema
+from schemas import UserSchema
 from datetime import datetime
 from flask_cors import cross_origin
 from utils import confirm_token, generate_confirmation_token, send_mail
@@ -9,48 +9,7 @@ from marshmallow import ValidationError
 
 @app.before_first_request
 def create_tables():
-    db.create_all()
-
-@app.route('/region',methods=['GET','POST'])
-def regions():
-    regions_schema = RegionSchema(many=True)
-    region_schema = RegionSchema()
-    regions = Region.query.all()
-    if request.method == "POST":
-        data = request.get_json()
-        region_name = data['region_name'].capitalize()
-        region = Region(name=region_name)
-        db.session.add(region)
-        db.session.commit()
-        return jsonify(region_schema.dump(region))
-    return jsonify(regions_schema.dump(regions))
-
-@app.route('/region/<int:id>',methods=['GET','PUT','DELETE'])
-def regiondetail(id):
-    region_schema = RegionSchema()
-    region = Region.query.filter_by(id=id).first()
-
-    if request.method == "GET":
-        if region:
-            return jsonify(region_schema.dump(region))
-        else:
-            return jsonify({'error' : 'a region with the specified id was not found'}),404
-    elif request.method == "DELETE":
-        if region:
-            db.session.delete(region)
-            db.session.commit()
-            return jsonify({'success':'bug was successfully removed'})
-        else:
-            return jsonify({'error' : 'a region with the specified id was not found'}),404
-    elif request.method == "PUT":
-        if region:
-            data = request.get_json()
-            region_name = data['region_name'].capitalize()
-            region.name = region_name
-            db.session.commit()
-            return jsonify(region_schema.dump(region))
-        else:
-            return jsonify({'error' : 'a region with the specified id was not found'}),404  
+    db.create_all()  
     
 @app.route('/register',methods=['POST'])
 @cross_origin(origin='*',headers=['Content-Type','Authorization'])
@@ -62,7 +21,7 @@ def register():
         phone = data['phone']
         password = data['password']
         try:
-            registered_user_schema.load(data)
+            registered_user_schema.load(data,partial=True)
             user = User(email=email,phone=phone,date_joined=datetime.now())
             user.set_password(password)
             confirm_token = generate_confirmation_token(user.email)
@@ -74,7 +33,7 @@ def register():
             send_mail(subject,user.email,html)
             return jsonify(registered_user_schema.dump(user))
         except ValidationError as error:
-            return jsonify({'errors':error.messages})
+            return jsonify(error.messages)
 
 @app.route('/register/<token>')
 @cross_origin(origin='*',headers=['Content-Type','Authorization'])

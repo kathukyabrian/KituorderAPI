@@ -1,4 +1,4 @@
-from marshmallow import Schema, fields, ValidationError, validates
+from marshmallow import Schema, fields, ValidationError, validates, INCLUDE
 from models import User
 class RegionSchema(Schema):
     id = fields.Int(dump_only=True)
@@ -30,4 +30,7 @@ class UserSchema(Schema):
             raise ValidationError('phone number is already in use.')
 
         if len(value)<10:
-            raise ValidationError('Not a valid phone number')    
+            raise ValidationError('Not a valid phone number')  
+
+    class Meta:
+        unknown = INCLUDE  
