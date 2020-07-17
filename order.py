@@ -69,7 +69,12 @@ def login():
         else:
             return jsonify({'error':'invalid credentials'})
 
-
+@app.route('/users')
+def public_users():
+    users = User.query.all()
+    registered_user_schema = UserSchema(only=('id','email'))
+    if users:
+        return jsonify(registered_user_schema.dump(users,many=True))
 
 if __name__ == '__main__':
     app.run(debug=True)
