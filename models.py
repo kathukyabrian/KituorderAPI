@@ -65,11 +65,17 @@ class User(db.Model,UserMixin):
     def __repr__(self):
         return "<User {}>".format(self.email)
 
-class Bug(db.Model):
+class Category(db.Model):
     id = db.Column(db.Integer,primary_key=True)
-    subject = db.Column(db.String,nullable=False)
-    body = db.Column(db.String,nullable=False)
-    user = db.Column(db.Integer,db.ForeignKey('user.id'))
+    name = db.Column(db.String,nullable=False,unique=True)
 
     def __repr__(self):
-        return "<Bug {}>".format(self.subject)
+        return "<Category {}>".format(self.name)
+
+class SubCategory(db.Model):
+    id = db.Column(db.Integer,primary_key=True)
+    name = db.Column(db.String,nullable=False,unique=True)
+    category = db.Column(db.Integer,db.ForeignKey('category.id'))
+
+    def __repr__(self):
+        return "<SubCategory {}>".format(self.name)

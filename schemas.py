@@ -1,8 +1,6 @@
 from marshmallow import Schema, fields, ValidationError, validates, INCLUDE
-from models import User
-class RegionSchema(Schema):
-    id = fields.Int(dump_only=True)
-    name = fields.Str()
+from models import User, Category, SubCategory
+from config import db
 
 class UserSchema(Schema):
     id = fields.Int(dump_only=True)
@@ -15,7 +13,7 @@ class UserSchema(Schema):
     admin = fields.Bool()
     date_joined = fields.Date()
     recommender = fields.Bool()
-    passwordhash = fields.Str(dump_only=True)
+    passwordhash = fields.Str(load_only=True)
 
     @validates('email')
     def validate_email(self,value):
@@ -35,3 +33,24 @@ class UserSchema(Schema):
     class Meta:
         unknown = INCLUDE  
         ordered = True
+
+class CategorySchema(Schema):
+    id = fields.Int(dump_only=True)
+    name = fields.String()
+
+    @validates('name')
+    def validate_name(self,value):
+        category = Category.query.filter_by(name=value).first()
+        if category:
+            raise ValidationError("Category already exists")
+
+class SubCategorySchema(Schema):
+    id = fields.Int(dump_only=True)
+    name = fields.String()
+    category = fields.Int()
+
+    @validates('name')
+    def validate_name(self,value):
+        subcategory = SubCategory.query.filter_by(name=value).first()
+        if subcategory:
+            raise ValidationError("Category already exists")

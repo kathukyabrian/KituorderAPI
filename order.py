@@ -1,7 +1,7 @@
 from config import app, db
 from flask import jsonify, redirect, url_for, request, render_template
-from models import Bug, Region, User
-from schemas import UserSchema
+from models import Region, User, Category, SubCategory
+from schemas import UserSchema, CategorySchema, SubCategorySchema
 from datetime import datetime
 from flask_cors import cross_origin
 from utils import confirm_token, generate_confirmation_token, send_mail
@@ -68,6 +68,60 @@ def login():
                 return jsonify({'error':'something went wrong, try again'})
         else:
             return jsonify({'error':'invalid credentials'})
+
+@app.route('/categories',methods=["POST","GET"])
+@cross_origin(origin='*',headers=['Content-Type','Authorization'])
+def categories():
+    category_schema = CategorySchema()
+    categories_schema = CategorySchema(many=True)
+
+    if request.method == "POST":
+        data = request.get_json()
+        name = data['name']
+
+        try:
+            category_schema.load(data,partial=True)
+            category = Category(name=name)
+            db.session.add(category)
+            db.session.commit()
+            return jsonify(category_schema.dump(data))
+            return data
+        except ValidationError as error:
+            return jsonify(error.messages)
+
+    elif request.method == "GET":
+        categories = Category.query.all()
+        if categories:
+            return jsonify(categories_schema.dump(categories))
+        else:
+            return jsonify({'error':'No categories were found'})
+
+@app.route('/categories/<int:id>',methods=['POST','GET'])
+@cross_origin(origin='*',headers=['Content-Type','Authorization'])
+def subcategories(id):
+    subcategory_schema = SubCategorySchema()
+    subcategories_schema = SubCategorySchema(many=True)
+
+    if request.method == "GET":
+        subcategories = SubCategory.query.filter_by(category=id).all()
+
+        if subcategories:
+            return jsonify(subcategories_schema.dump(subcategories))
+        else:
+            return jsonify({'error':'no subcategories were found for this category'})
+
+    elif request.method == "POST":
+        data = request.get_json()
+        name = data['name']
+
+        try:
+            subcategory_schema.load(data,partial=True)
+            subcategory = SubCategory(name=name,category=id)
+            db.session.add(subcategory) 
+            db.session.commit()
+            return jsonify(subcategory_schema.dump(subcategory))
+        except ValidationError as error:
+            return jsonify(error.messages)
 
 @app.route('/users')
 def public_users():
