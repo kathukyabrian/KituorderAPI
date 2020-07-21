@@ -96,7 +96,8 @@ def categories():
         else:
             return jsonify({'error':'No categories were found'})
 
-@app.route('/categories/<int:id>',methods=['POST','GET'])
+
+@app.route('/categories/<int:id>',methods=['POST','GET','PUT'])
 @cross_origin(origin='*',headers=['Content-Type','Authorization'])
 def subcategories(id):
     subcategory_schema = SubCategorySchema()
@@ -122,6 +123,24 @@ def subcategories(id):
             return jsonify(subcategory_schema.dump(subcategory))
         except ValidationError as error:
             return jsonify(error.messages)
+
+    elif request.method == "PUT":
+        category_schema = CategorySchema()
+        data = request.get_json()
+        name = data['name']
+        category = Category.query.filter_by(id=id).first()
+        category.name = name
+        db.session.commit()
+        return jsonify(category_schema.dump(category))
+
+@app.route('/categories/<int:id>/<int:pk>',methods=["GET","PUT"])
+@cross_origin(origin='*',headers=['Content-Type','Authorization'])
+def subcategory(id,pk):
+    subcategory_schema = SubCategorySchema()
+    if  request.method == "GET":
+        subcategory = SubCategory.filter_by(category=id,id=pk).first()
+        if subcategory:
+            return jsonify(subcategory_schema.dump(subcategory))
 
 @app.route('/users')
 def public_users():
